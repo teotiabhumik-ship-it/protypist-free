@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #1e1e24;
+  --card: #282932;
+  --main: #e2b714;
+  --caret: #e2b714;
+  --sub: #646669;
+  --text: #d1d0c5;
+  --error: #ca4754;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.caret-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Custom scrollbar for Exam mode passage pane */
+.exam-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.exam-scroll::-webkit-scrollbar-track {
+  background: #e0e0e0;
+}
+.exam-scroll::-webkit-scrollbar-thumb {
+  background: #999;
+  border-radius: 4px;
+}
+.exam-scroll::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
