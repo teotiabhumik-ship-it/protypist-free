@@ -3,7 +3,7 @@
   "appId": "com.typepulse.app",
   "productName": "TypePulse",
   "files": [
-    "dist-web/**/*",
+    "dist/**/*",
     "electron/**/*"
   ],
   "directories": {

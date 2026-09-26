@@ -14,7 +14,7 @@ function createWindow() {
   });
 
   // Load the Vite production build (relative paths via base: './')
-  win.loadFile(path.join(__dirname, '..', 'dist-web', 'index.html'));
+  win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
 }
 
 app.whenReady().then(createWindow);
