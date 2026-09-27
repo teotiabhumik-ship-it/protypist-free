@@ -409,13 +409,25 @@ export default function App() {
           onSelectPyqPassage={(pyq) => setExamPassage(pyq)}
         />
       ) : (
-        <main className="flex-1 flex flex-col items-center justify-center p-3">
-          {appMode === 'generative' && <GenerativeTypingDrill />}
-          {appMode === 'micro-editing' && <MicroEditingDrill />}
-          {appMode === 'lookahead' && <LookaheadDrill />}
+        <main className="flex-1 flex flex-col items-center justify-start p-3 sm:px-6 w-full">
+          {appMode === 'generative' && (
+            <div className="w-full my-auto py-4">
+              <GenerativeTypingDrill />
+            </div>
+          )}
+          {appMode === 'micro-editing' && (
+            <div className="w-full my-auto py-4">
+              <MicroEditingDrill />
+            </div>
+          )}
+          {appMode === 'lookahead' && (
+            <div className="w-full my-auto py-4">
+              <LookaheadDrill />
+            </div>
+          )}
 
           {appMode === 'classic' && (
-          <div className="w-full flex flex-col items-center">
+            <div className="w-full flex flex-col items-center my-auto py-4">
             {/* ── Sub-Mode Controller Strip ───────────────────────────────── */}
             <div
               className="flex flex-wrap items-center justify-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-xl border mb-4 shadow-sm"

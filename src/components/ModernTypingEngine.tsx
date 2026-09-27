@@ -111,11 +111,26 @@ export const ModernTypingEngine: React.FC<Props> = ({
   const [caretX, setCaretX] = useState(0);
   const [caretY, setCaretY] = useState(0);
   const [caretH, setCaretH] = useState(28);
+  const [caretW, setCaretW] = useState(14);
+  const [caretVisible, setCaretVisible] = useState(false);
+
+  // Paragraph overflow and scrolling gradient indicators
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const [canScrollUp, setCanScrollUp] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const wordsBoxRef = useRef<HTMLDivElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const checkScrollOverflow = useCallback(() => {
+    const box = wordsBoxRef.current;
+    if (!box) return;
+    const hasMoreBelow = box.scrollHeight - box.scrollTop - box.clientHeight > 8;
+    const hasMoreAbove = box.scrollTop > 8;
+    setCanScrollDown(hasMoreBelow);
+    setCanScrollUp(hasMoreAbove);
+  }, []);
 
   // Live refs to guarantee fresh data inside timer closure
   const liveStatsRef = useRef({
@@ -161,9 +176,11 @@ export const ModernTypingEngine: React.FC<Props> = ({
     if (wordsBoxRef.current) {
       wordsBoxRef.current.scrollTop = 0;
     }
+    setCanScrollUp(false);
+    setTimeout(checkScrollOverflow, 50);
     hiddenInputRef.current?.focus();
     if (timerRef.current) clearInterval(timerRef.current);
-  }, [wordsText]);
+  }, [wordsText, checkScrollOverflow]);
 
   // ── Synchronize Caret Position ────────────────────────────────────────────
   const syncCaret = useCallback(() => {
@@ -178,12 +195,39 @@ export const ModernTypingEngine: React.FC<Props> = ({
     const targetCharSpan = charSpans[currWordInput.length];
 
     const boxRect = box.getBoundingClientRect();
+    const borderLeft = box.clientLeft || 0;
+    const borderTop = box.clientTop || 0;
+
+    let targetX = 0;
+    let targetY = 0;
+    let targetH = 28;
+    let targetW = 14;
 
     if (targetCharSpan) {
       const charRect = targetCharSpan.getBoundingClientRect();
-      setCaretX(charRect.left - boxRect.left);
-      setCaretY(charRect.top - boxRect.top + box.scrollTop);
-      setCaretH(charRect.height || 28);
+      const charW = Math.max(8, charRect.width || 14);
+      targetW = charW;
+
+      if (caretStyle === 'underline') {
+        const underlineThickness = 3;
+        targetH = underlineThickness;
+        targetX = charRect.left - boxRect.left - borderLeft;
+        targetY =
+          charRect.top -
+          boxRect.top -
+          borderTop +
+          box.scrollTop +
+          charRect.height -
+          underlineThickness -
+          2;
+      } else {
+        const caretHeight = 28;
+        targetH = caretHeight;
+        // Center the 28px vertical bar within the character span's line height
+        const vOffset = Math.max(0, (charRect.height - caretHeight) / 2);
+        targetX = charRect.left - boxRect.left - borderLeft;
+        targetY = charRect.top - boxRect.top - borderTop + box.scrollTop + vOffset;
+      }
 
       // Smooth auto-scroll when line changes
       const relTop = charRect.top - boxRect.top;
@@ -196,17 +240,73 @@ export const ModernTypingEngine: React.FC<Props> = ({
       // Placed at the end of the current word
       const lastSpan = charSpans[charSpans.length - 1];
       const lastRect = lastSpan.getBoundingClientRect();
-      setCaretX(lastRect.right - boxRect.left);
-      setCaretY(lastRect.top - boxRect.top + box.scrollTop);
-      setCaretH(lastRect.height || 28);
+      const charW = Math.max(8, lastRect.width || 14);
+      targetW = charW;
+
+      if (caretStyle === 'underline') {
+        const underlineThickness = 3;
+        targetH = underlineThickness;
+        targetX = lastRect.right - boxRect.left - borderLeft;
+        targetY =
+          lastRect.top -
+          boxRect.top -
+          borderTop +
+          box.scrollTop +
+          lastRect.height -
+          underlineThickness -
+          2;
+      } else {
+        const caretHeight = 28;
+        targetH = caretHeight;
+        const vOffset = Math.max(0, (lastRect.height - caretHeight) / 2);
+        targetX = lastRect.right - boxRect.left - borderLeft;
+        targetY = lastRect.top - boxRect.top - borderTop + box.scrollTop + vOffset;
+      }
+    } else {
+      const wordRect = activeWordSpan.getBoundingClientRect();
+      const caretHeight = 28;
+      const vOffset = Math.max(0, (wordRect.height - caretHeight) / 2);
+      targetX = wordRect.left - boxRect.left - borderLeft;
+      targetY = wordRect.top - boxRect.top - borderTop + box.scrollTop + vOffset;
+      targetH = caretHeight;
+      targetW = 14;
     }
-  }, [activeWordIdx, currWordInput.length]);
+
+    setCaretX(targetX);
+    setCaretY(targetY);
+    setCaretH(targetH);
+    setCaretW(targetW);
+    setCaretVisible(true);
+    checkScrollOverflow();
+  }, [activeWordIdx, currWordInput.length, caretStyle, checkScrollOverflow]);
 
   useEffect(() => {
     syncCaret();
-    window.addEventListener('resize', syncCaret);
-    return () => window.removeEventListener('resize', syncCaret);
-  }, [syncCaret]);
+    checkScrollOverflow();
+    const rafId = requestAnimationFrame(() => {
+      syncCaret();
+      checkScrollOverflow();
+    });
+
+    const box = wordsBoxRef.current;
+    const handleUpdate = () => {
+      syncCaret();
+      checkScrollOverflow();
+    };
+
+    window.addEventListener('resize', handleUpdate);
+    if (box) {
+      box.addEventListener('scroll', handleUpdate);
+    }
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleUpdate);
+      if (box) {
+        box.removeEventListener('scroll', handleUpdate);
+      }
+    };
+  }, [syncCaret, checkScrollOverflow]);
 
   // ── Keystroke Calculations ────────────────────────────────────────────────
   const { correctChars, totalTypedChars, totalErrors } = useMemo(() => {
@@ -590,89 +690,115 @@ export const ModernTypingEngine: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* ── Word Streamer Box with Smooth Caret ────────────────────────── */}
-          <div
-            ref={wordsBoxRef}
-            className="relative overflow-hidden text-2xl leading-relaxed tracking-wider break-words rounded-xl p-5 border transition-all"
-            style={{
-              background: 'var(--card)',
-              borderColor: 'color-mix(in srgb, var(--sub) 20%, transparent)',
-              height: '160px',
-            }}
-          >
-            {/* Dynamic Caret Element */}
+          {/* ── Word Streamer Box with Smooth Caret & Overflow Gradients ─── */}
+          <div className="relative rounded-xl">
             <div
-              className={`absolute pointer-events-none transition-all duration-75 ease-out ${
-                caretStyle === 'smooth'
-                  ? 'w-0.5 bg-[var(--main)] animate-pulse'
-                  : caretStyle === 'block'
-                  ? 'w-3.5 bg-[var(--main)] opacity-40'
-                  : 'h-0.5 w-3.5 bg-[var(--main)] self-end'
-              }`}
+              ref={wordsBoxRef}
+              onScroll={checkScrollOverflow}
+              className="relative overflow-hidden text-2xl leading-relaxed tracking-wider break-words rounded-xl p-5 border transition-all"
               style={{
-                transform: `translate3d(${caretX}px, ${caretY}px, 0)`,
-                height: `${caretH}px`,
+                background: 'var(--card)',
+                borderColor: 'color-mix(in srgb, var(--sub) 20%, transparent)',
+                height: '160px',
+              }}
+            >
+              {/* Dynamic Caret Element */}
+              <div
+                className={`absolute top-0 left-0 pointer-events-none transition-all duration-75 ease-out ${
+                  !caretVisible ? 'opacity-0' : 'opacity-100'
+                } ${
+                  caretStyle === 'smooth'
+                    ? 'w-[2.5px] rounded-full bg-[var(--caret,var(--main))] caret-blink shadow-[0_0_8px_var(--caret,var(--main))]'
+                    : caretStyle === 'block'
+                    ? 'bg-[var(--caret,var(--main))] opacity-35 rounded-sm'
+                    : 'bg-[var(--caret,var(--main))] rounded-full'
+                }`}
+                style={{
+                  transform: `translate3d(${caretX}px, ${caretY}px, 0)`,
+                  height: `${caretH}px`,
+                  width: caretStyle === 'smooth' ? '2.5px' : `${caretW}px`,
+                }}
+              />
+
+              {/* Word List Rendering */}
+              <div className="flex flex-wrap gap-x-3 gap-y-2">
+                {targetWords.map((word, wIdx) => {
+                  const isPassed = wIdx < activeWordIdx;
+                  const isCurrent = wIdx === activeWordIdx;
+                  const typedWord = isPassed
+                    ? typedWords[wIdx] || ''
+                    : isCurrent
+                    ? currWordInput
+                    : '';
+
+                  // Extra characters typed beyond word length
+                  const extraChars = isCurrent && currWordInput.length > word.length
+                    ? currWordInput.slice(word.length)
+                    : '';
+
+                  return (
+                    <span
+                      key={wIdx}
+                      data-word-idx={wIdx}
+                      className={`relative inline-block transition-opacity duration-150 ${
+                        isPassed ? 'opacity-80' : isCurrent ? 'opacity-100' : 'opacity-50'
+                      }`}
+                    >
+                      {word.split('').map((char, cIdx) => {
+                        let charClass = 'text-[var(--sub)]';
+                        if (cIdx < typedWord.length) {
+                          charClass =
+                            typedWord[cIdx] === char
+                              ? 'text-[var(--text)] font-semibold'
+                              : 'text-[var(--error)] bg-red-500/15 rounded-sm';
+                        }
+
+                        return (
+                          <span
+                            key={cIdx}
+                            data-char-idx={cIdx}
+                            className={`transition-colors duration-75 ${charClass}`}
+                          >
+                            {char}
+                          </span>
+                        );
+                      })}
+
+                      {/* Render Extra Characters Typed in Red */}
+                      {extraChars.split('').map((xChar, xIdx) => (
+                        <span
+                          key={`x-${xIdx}`}
+                          data-char-idx={word.length + xIdx}
+                          className="text-[var(--error)] opacity-90 underline font-bold"
+                        >
+                          {xChar}
+                        </span>
+                      ))}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Top Fade Gradient (shown when user scrolled down) */}
+            <div
+              className="absolute top-[1px] left-[1px] right-[1px] h-10 pointer-events-none rounded-t-[11px] transition-opacity duration-300"
+              style={{
+                background:
+                  'linear-gradient(to bottom, var(--card) 10%, color-mix(in srgb, var(--card) 60%, transparent) 60%, transparent 100%)',
+                opacity: canScrollUp ? 1 : 0,
               }}
             />
 
-            {/* Word List Rendering */}
-            <div className="flex flex-wrap gap-x-3 gap-y-2">
-              {targetWords.map((word, wIdx) => {
-                const isPassed = wIdx < activeWordIdx;
-                const isCurrent = wIdx === activeWordIdx;
-                const typedWord = isPassed
-                  ? typedWords[wIdx] || ''
-                  : isCurrent
-                  ? currWordInput
-                  : '';
-
-                // Extra characters typed beyond word length
-                const extraChars = isCurrent && currWordInput.length > word.length
-                  ? currWordInput.slice(word.length)
-                  : '';
-
-                return (
-                  <span
-                    key={wIdx}
-                    data-word-idx={wIdx}
-                    className={`relative inline-block transition-opacity duration-150 ${
-                      isPassed ? 'opacity-80' : isCurrent ? 'opacity-100' : 'opacity-50'
-                    }`}
-                  >
-                    {word.split('').map((char, cIdx) => {
-                      let charClass = 'text-[var(--sub)]';
-                      if (cIdx < typedWord.length) {
-                        charClass =
-                          typedWord[cIdx] === char
-                            ? 'text-[var(--text)] font-semibold'
-                            : 'text-[var(--error)] bg-red-500/15 rounded-sm';
-                      }
-
-                      return (
-                        <span
-                          key={cIdx}
-                          data-char-idx={cIdx}
-                          className={`transition-colors duration-75 ${charClass}`}
-                        >
-                          {char}
-                        </span>
-                      );
-                    })}
-
-                    {/* Render Extra Characters Typed in Red */}
-                    {extraChars.split('').map((xChar, xIdx) => (
-                      <span
-                        key={`x-${xIdx}`}
-                        data-char-idx={word.length + xIdx}
-                        className="text-[var(--error)] opacity-90 underline font-bold"
-                      >
-                        {xChar}
-                      </span>
-                    ))}
-                  </span>
-                );
-              })}
-            </div>
+            {/* Bottom Fade Gradient (shown when text extends below visible viewport) */}
+            <div
+              className="absolute bottom-[1px] left-[1px] right-[1px] h-16 pointer-events-none rounded-b-[11px] transition-opacity duration-300"
+              style={{
+                background:
+                  'linear-gradient(to top, var(--card) 20%, color-mix(in srgb, var(--card) 70%, transparent) 60%, transparent 100%)',
+                opacity: canScrollDown ? 1 : 0,
+              }}
+            />
           </div>
 
           {/* Virtual Keyboard (Illuminates on active key press) */}

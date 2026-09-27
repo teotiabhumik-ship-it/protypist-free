@@ -184,7 +184,7 @@ export const TcsIonSimulator: React.FC<Props> = ({
 
   return (
     <div
-      className="flex flex-col h-screen w-screen text-xs select-none overflow-hidden"
+      className="fixed inset-0 z-50 flex flex-col text-xs select-none overflow-hidden"
       style={{ background: '#f0f0f0', color: '#222', fontFamily: 'Arial, sans-serif' }}
       onContextMenu={block}
     >
