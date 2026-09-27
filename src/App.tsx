@@ -33,23 +33,52 @@ import {
 export type AppMainMode =
   | 'classic'
   | 'exam'
+  | 'drills'
   | 'generative'
   | 'micro-editing'
   | 'lookahead';
+
+export type DrillSubMode = 'generative' | 'micro-editing' | 'lookahead';
+
+const DRILL_DESCRIPTIONS: Record<
+  DrillSubMode,
+  { label: string; icon: string; desc: string }
+> = {
+  generative: {
+    label: 'Cognitive Drill: Thought-to-Keyboard & Audio Dictation',
+    icon: '🧠',
+    desc: 'Train original composition velocity, cognitive formulation pause telemetry, and real-time auditory shadowing.',
+  },
+  'micro-editing': {
+    label: 'Cognitive Drill: Micro-Editing & Locomotion Sandbox',
+    icon: '🔧',
+    desc: 'Mouse navigation strictly blocked! Remediate code errors using Ctrl+Arrows, Home/End, and master IDE snippet autocomplete.',
+  },
+  lookahead: {
+    label: 'Cognitive Drill: Visual Lookahead & Eye-Buffer Training',
+    icon: '👁️',
+    desc: 'Dynamic trailing curtain masking hides active words to condition your visual gaze 2–4 words ahead of motor output.',
+  },
+};
 
 const MODE_DESCRIPTIONS: Record<
   AppMainMode,
   { label: string; icon: string; desc: string }
 > = {
   classic: {
-    label: 'Monkeytype Engine & 1,000+ Exam Corpus',
-    icon: '⌨️',
+    label: 'ProType Engine & 1,000+ Exam Corpus',
+    icon: '⚡',
     desc: 'Kinematic typing tests with inter-key latency diagnostics, SFB bottleneck detection, and mechanical key sounds.',
   },
   exam: {
     label: 'TCS iON SSC DEST Exam Simulator',
     icon: '🛡️',
     desc: 'Official 15-minute examination console with 12 authentic CGL/CHSL PYQ shifts: 2,000 key depressions target, KDPH speed scoring, and Full/Half mistake penalties.',
+  },
+  drills: {
+    label: 'Multi-Sensory Cognitive Drills',
+    icon: '🧪',
+    desc: 'Targeted drills: Thought-to-Keyboard formulation, zero-mouse Micro-Editing, and foveal Visual Lookahead masking.',
   },
   generative: {
     label: 'Pillar 1: Thought-to-Keyboard & Audio Dictation',
@@ -70,6 +99,22 @@ const MODE_DESCRIPTIONS: Record<
 
 export default function App() {
   const [appMode, setAppMode] = useState<AppMainMode>('classic');
+  const [drillSubMode, setDrillSubMode] = useState<DrillSubMode>('generative');
+
+  const isDrillsMode =
+    appMode === 'drills' ||
+    appMode === 'generative' ||
+    appMode === 'micro-editing' ||
+    appMode === 'lookahead';
+
+  const handleSelectAppMode = (mode: AppMainMode) => {
+    if (mode === 'generative' || mode === 'micro-editing' || mode === 'lookahead') {
+      setAppMode('drills');
+      setDrillSubMode(mode);
+    } else {
+      setAppMode(mode);
+    }
+  };
   const [gameMode, setGameMode] = useState<GameMode>('time');
   const [timeLimit, setTimeLimit] = useState(30);
   const [wordLimit, setWordLimit] = useState(25);
@@ -245,7 +290,7 @@ export default function App() {
             }`}
           >
             <Keyboard className="w-3.5 h-3.5" />
-            <span>Monkeytype</span>
+            <span>ProType</span>
           </button>
 
           <button
@@ -264,39 +309,18 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setAppMode('generative')}
+            onClick={() => setAppMode('drills')}
             className={`px-3 py-1.5 rounded-lg font-semibold flex items-center space-x-1.5 whitespace-nowrap transition ${
-              appMode === 'generative'
+              isDrillsMode
                 ? 'bg-purple-600 text-white font-bold shadow'
                 : 'opacity-70 hover:opacity-100'
             }`}
           >
             <Brain className="w-3.5 h-3.5" />
-            <span>Generative Typing</span>
-          </button>
-
-          <button
-            onClick={() => setAppMode('micro-editing')}
-            className={`px-3 py-1.5 rounded-lg font-semibold flex items-center space-x-1.5 whitespace-nowrap transition ${
-              appMode === 'micro-editing'
-                ? 'bg-sky-600 text-white font-bold shadow'
-                : 'opacity-70 hover:opacity-100'
-            }`}
-          >
-            <Wrench className="w-3.5 h-3.5" />
-            <span>Micro-Editing</span>
-          </button>
-
-          <button
-            onClick={() => setAppMode('lookahead')}
-            className={`px-3 py-1.5 rounded-lg font-semibold flex items-center space-x-1.5 whitespace-nowrap transition ${
-              appMode === 'lookahead'
-                ? 'bg-amber-600 text-white font-bold shadow'
-                : 'opacity-70 hover:opacity-100'
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span>Visual Lookahead</span>
+            <span>Cognitive Drills</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-purple-400/20 text-purple-200 border border-purple-400/30 ml-0.5">
+              3 in 1
+            </span>
           </button>
         </div>
 
@@ -381,12 +405,20 @@ export default function App() {
         }}
       >
         <div className="flex items-center space-x-2">
-          <span className="text-base">{MODE_DESCRIPTIONS[appMode].icon}</span>
+          <span className="text-base">
+            {isDrillsMode
+              ? DRILL_DESCRIPTIONS[drillSubMode].icon
+              : MODE_DESCRIPTIONS[appMode]?.icon || '⚡'}
+          </span>
           <span className="font-bold" style={{ color: 'var(--main)' }}>
-            {MODE_DESCRIPTIONS[appMode].label}:
+            {isDrillsMode
+              ? DRILL_DESCRIPTIONS[drillSubMode].label
+              : MODE_DESCRIPTIONS[appMode]?.label || 'ProType'}:
           </span>
           <span className="opacity-80 hidden sm:inline">
-            {MODE_DESCRIPTIONS[appMode].desc}
+            {isDrillsMode
+              ? DRILL_DESCRIPTIONS[drillSubMode].desc
+              : MODE_DESCRIPTIONS[appMode]?.desc}
           </span>
         </div>
 
@@ -408,26 +440,62 @@ export default function App() {
           onNextPassage={shuffleNextPassage}
           onSelectPyqPassage={(pyq) => setExamPassage(pyq)}
         />
+      ) : isDrillsMode ? (
+        <main className="flex-1 flex flex-col items-center justify-start p-3 sm:px-6 w-full">
+          <div className="w-full max-w-5xl my-auto py-4 space-y-4">
+            {/* Drills Sub-Module Navigation Switcher */}
+            <div
+              className="flex items-center justify-center p-1.5 rounded-2xl border bg-black/25 gap-1.5 sm:gap-2 max-w-2xl mx-auto shadow-sm select-none"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--sub) 30%, transparent)',
+              }}
+            >
+              <button
+                onClick={() => setDrillSubMode('generative')}
+                className={`flex-1 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition ${
+                  drillSubMode === 'generative'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'opacity-70 hover:opacity-100 hover:bg-white/5'
+                }`}
+              >
+                <Brain className="w-4 h-4 text-purple-200" />
+                <span className="whitespace-nowrap">Generative & Dictation</span>
+              </button>
+
+              <button
+                onClick={() => setDrillSubMode('micro-editing')}
+                className={`flex-1 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition ${
+                  drillSubMode === 'micro-editing'
+                    ? 'bg-sky-600 text-white shadow-md'
+                    : 'opacity-70 hover:opacity-100 hover:bg-white/5'
+                }`}
+              >
+                <Wrench className="w-4 h-4 text-sky-200" />
+                <span className="whitespace-nowrap">Micro-Editing</span>
+              </button>
+
+              <button
+                onClick={() => setDrillSubMode('lookahead')}
+                className={`flex-1 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition ${
+                  drillSubMode === 'lookahead'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'opacity-70 hover:opacity-100 hover:bg-white/5'
+                }`}
+              >
+                <Eye className="w-4 h-4 text-emerald-200" />
+                <span className="whitespace-nowrap">Visual Lookahead</span>
+              </button>
+            </div>
+
+            {/* Active Drill View */}
+            {drillSubMode === 'generative' && <GenerativeTypingDrill />}
+            {drillSubMode === 'micro-editing' && <MicroEditingDrill />}
+            {drillSubMode === 'lookahead' && <LookaheadDrill />}
+          </div>
+        </main>
       ) : (
         <main className="flex-1 flex flex-col items-center justify-start p-3 sm:px-6 w-full">
-          {appMode === 'generative' && (
-            <div className="w-full my-auto py-4">
-              <GenerativeTypingDrill />
-            </div>
-          )}
-          {appMode === 'micro-editing' && (
-            <div className="w-full my-auto py-4">
-              <MicroEditingDrill />
-            </div>
-          )}
-          {appMode === 'lookahead' && (
-            <div className="w-full my-auto py-4">
-              <LookaheadDrill />
-            </div>
-          )}
-
-          {appMode === 'classic' && (
-            <div className="w-full flex flex-col items-center my-auto py-4">
+          <div className="w-full flex flex-col items-center my-auto py-4">
             {/* ── Sub-Mode Controller Strip ───────────────────────────────── */}
             <div
               className="flex flex-wrap items-center justify-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-xl border mb-4 shadow-sm"
@@ -604,8 +672,7 @@ export default function App() {
               onSwitchToExam={() => setAppMode('exam')}
             />
           </div>
-        )}
-      </main>
+        </main>
       )}
 
       {/* ═══ FOOTER ══════════════════════════════════════════════════════════ */}
@@ -650,7 +717,7 @@ export default function App() {
       <OnboardingModal
         isOpen={isOnboardingOpen}
         onClose={() => setIsOnboardingOpen(false)}
-        onSelectMode={(m) => setAppMode(m)}
+        onSelectMode={handleSelectAppMode}
       />
     </div>
   );

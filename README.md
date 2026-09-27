@@ -8,7 +8,7 @@ TypePulse is a dual-purpose typing application built with React, Vite, Tailwind 
 
 ## 🚀 Key Features
 
-### 1. Modern Typing Experience (Monkeytype Style)
+### 1. Modern Typing Experience (ProType Engine)
 * **Real-time Engine:** Fluid caret animations with bounding-box coordinate tracking (`smooth`, `block`, and `underline` styles).
 * **Multiple Game Modes:**
   * **Time Mode:** 15s, 30s, 60s, 120s endurance tests.

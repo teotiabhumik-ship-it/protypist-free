@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// ProTypist / TypePulse - Monkeytype & Professional Color Themes
+// ProTypist / TypePulse - ProType & Professional Color Themes
 // Sets CSS variables on :root for seamless live theme switching
 // ═══════════════════════════════════════════════════════════════════════════════
 

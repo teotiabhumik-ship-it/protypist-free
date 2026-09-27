@@ -45,7 +45,7 @@ export const OnboardingModal: React.FC<Props> = ({
     {
       mode: 'classic' as AppMainMode,
       icon: <Keyboard className="w-5 h-5 text-amber-400" />,
-      title: 'Monkeytype Classic & 1,000+ Corpus',
+      title: 'ProType Classic & 1,000+ Corpus',
       subtitle: 'Kinematic Speed Testing',
       desc: 'Sub-millisecond inter-key interval tracking, Same-Finger Bigram (SFB) bottleneck detection, bilateral hand heatmaps, and customizable mechanical key sounds.',
       badge: 'Core Engine',
