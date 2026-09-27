@@ -17,6 +17,7 @@ import {
 import { TYPING_LESSONS, type TypingLesson } from './lib/lessons';
 import { applyTheme, THEMES } from './lib/themes';
 import { PassageManager, CORPUS_1000_PASSAGES, type CorpusPassage } from './lib/corpus1000';
+import { SSC_PYQ_PASSAGES, type SscPyqPassage } from './lib/sscPyqPassages';
 import {
   Brain,
   Wrench,
@@ -48,7 +49,7 @@ const MODE_DESCRIPTIONS: Record<
   exam: {
     label: 'TCS iON SSC DEST Exam Simulator',
     icon: '🛡️',
-    desc: 'Official 15-minute examination console: 2,000 key depressions target, KDPH speed scoring, and Full/Half mistake penalties.',
+    desc: 'Official 15-minute examination console with 12 authentic CGL/CHSL PYQ shifts: 2,000 key depressions target, KDPH speed scoring, and Full/Half mistake penalties.',
   },
   generative: {
     label: 'Pillar 1: Thought-to-Keyboard & Audio Dictation',
@@ -98,8 +99,10 @@ export default function App() {
   const [currentLesson, setCurrentLesson] = useState<TypingLesson>(TYPING_LESSONS[0]);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
 
-  // Exam Mode State
-  const [examPassage, setExamPassage] = useState(CORPUS_1000_PASSAGES[0]);
+  // Exam Mode State (defaults to authentic official PYQ passage)
+  const [examPassage, setExamPassage] = useState<CorpusPassage | SscPyqPassage>(
+    () => SSC_PYQ_PASSAGES[0]
+  );
 
   // Apply saved theme on mount
   useEffect(() => {
@@ -255,6 +258,9 @@ export default function App() {
           >
             <Shield className="w-3.5 h-3.5" />
             <span>TCS iON SSC Exam</span>
+            <span className="text-[9px] px-1 py-0.5 rounded font-extrabold uppercase bg-amber-400 text-slate-900 ml-0.5">
+              12 PYQs
+            </span>
           </button>
 
           <button
@@ -400,6 +406,7 @@ export default function App() {
           passageTitle={examPassage.title}
           onExit={() => setAppMode('classic')}
           onNextPassage={shuffleNextPassage}
+          onSelectPyqPassage={(pyq) => setExamPassage(pyq)}
         />
       ) : (
         <main className="flex-1 flex flex-col items-center justify-center p-3">

@@ -16,6 +16,7 @@ import {
   Award,
   Filter,
   Activity,
+  BookOpen,
 } from 'lucide-react';
 
 interface Props {
@@ -26,6 +27,7 @@ interface Props {
   onClose: () => void;
   onRetry: () => void;
   onNextPassage: () => void;
+  onSelectPyq?: () => void;
 }
 
 export const SscScorecardModal: React.FC<Props> = ({
@@ -36,6 +38,7 @@ export const SscScorecardModal: React.FC<Props> = ({
   onClose,
   onRetry,
   onNextPassage,
+  onSelectPyq,
 }) => {
   const [filterType, setFilterType] = useState<'ALL' | 'FULL' | 'HALF'>('ALL');
   const [showKinematicsModal, setShowKinematicsModal] = useState(false);
@@ -285,6 +288,15 @@ export const SscScorecardModal: React.FC<Props> = ({
           </div>
 
           <div className="flex items-center space-x-3">
+            {onSelectPyq && (
+              <button
+                onClick={onSelectPyq}
+                className="px-4 py-2 rounded-lg text-sm font-semibold border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 flex items-center space-x-1.5 transition"
+              >
+                <BookOpen className="w-4 h-4 text-blue-400" />
+                <span>Choose PYQ Paper</span>
+              </button>
+            )}
             <button
               onClick={onRetry}
               className="px-4 py-2 rounded-lg text-sm font-semibold border flex items-center space-x-1.5 opacity-90 hover:opacity-100 transition"

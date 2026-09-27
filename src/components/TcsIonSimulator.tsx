@@ -3,13 +3,16 @@ import { evaluateSscDest, type SscCategory, type SscResult } from '@/lib/sscEval
 import { soundEngine, type SoundProfile } from '@/lib/soundEngine';
 import { KinematicTracker, type KinematicAnalysisSummary } from '@/lib/kinematicTelemetry';
 import { SscScorecardModal } from './SscScorecardModal';
-import { Volume2 } from 'lucide-react';
+import { SscPyqModal } from './SscPyqModal';
+import { SSC_PYQ_PASSAGES, type SscPyqPassage } from '@/lib/sscPyqPassages';
+import { Volume2, BookOpen } from 'lucide-react';
 
 interface Props {
   passageText: string;
   passageTitle: string;
   onExit: () => void;
   onNextPassage: () => void;
+  onSelectPyqPassage?: (passage: SscPyqPassage) => void;
 }
 
 export const TcsIonSimulator: React.FC<Props> = ({
@@ -17,6 +20,7 @@ export const TcsIonSimulator: React.FC<Props> = ({
   passageTitle,
   onExit,
   onNextPassage,
+  onSelectPyqPassage,
 }) => {
   const [typedText, setTypedText] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(15 * 60);
@@ -29,6 +33,21 @@ export const TcsIonSimulator: React.FC<Props> = ({
   const [soundProfile, setSoundProfile] = useState<SoundProfile>(soundEngine.getProfile());
   const [kinematicSummary, setKinematicSummary] = useState<KinematicAnalysisSummary | null>(null);
   const kinematicTrackerRef = useRef(new KinematicTracker());
+
+  // Active PYQ Passage Management
+  const [activePyq, setActivePyq] = useState<SscPyqPassage | null>(() => {
+    return (
+      SSC_PYQ_PASSAGES.find((p) => p.text === passageText || p.title === passageTitle) ||
+      SSC_PYQ_PASSAGES[0]
+    );
+  });
+  const [currentPassageText, setCurrentPassageText] = useState<string>(() => {
+    return passageText || SSC_PYQ_PASSAGES[0].text;
+  });
+  const [currentPassageTitle, setCurrentPassageTitle] = useState<string>(() => {
+    return passageTitle || SSC_PYQ_PASSAGES[0].title;
+  });
+  const [isPyqModalOpen, setIsPyqModalOpen] = useState(false);
 
   const taRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -53,7 +72,15 @@ export const TcsIonSimulator: React.FC<Props> = ({
     }
   }, [examReady, submitted]);
 
-  // Reset when passage changes
+  // Sync when prop passage changes
+  useEffect(() => {
+    setCurrentPassageText(passageText);
+    setCurrentPassageTitle(passageTitle);
+    const found = SSC_PYQ_PASSAGES.find((p) => p.text === passageText || p.title === passageTitle);
+    setActivePyq(found || null);
+  }, [passageText, passageTitle]);
+
+  // Reset when active passage text changes
   useEffect(() => {
     setTypedText('');
     typedTextRef.current = '';
@@ -67,7 +94,26 @@ export const TcsIonSimulator: React.FC<Props> = ({
     kinematicTrackerRef.current.reset();
     setKinematicSummary(null);
     if (timerRef.current) clearInterval(timerRef.current);
-  }, [passageText]);
+  }, [currentPassageText]);
+
+  const handleSelectPyq = (pyq: SscPyqPassage) => {
+    setActivePyq(pyq);
+    setCurrentPassageText(pyq.text);
+    setCurrentPassageTitle(pyq.title);
+    setTypedText('');
+    typedTextRef.current = '';
+    setSecondsLeft(15 * 60);
+    setSubmitted(false);
+    submittedRef.current = false;
+    setResult(null);
+    setStarted(false);
+    setShowConfirmModal(false);
+    setExamReady(false);
+    kinematicTrackerRef.current.reset();
+    setKinematicSummary(null);
+    if (timerRef.current) clearInterval(timerRef.current);
+    onSelectPyqPassage?.(pyq);
+  };
 
   const doSubmit = useCallback(() => {
     if (submittedRef.current) return;
@@ -78,11 +124,11 @@ export const TcsIonSimulator: React.FC<Props> = ({
 
     const activeText = typedTextRef.current;
     const activeCat = categoryRef.current;
-    const r = evaluateSscDest(passageText, activeText, activeCat, 15);
+    const r = evaluateSscDest(currentPassageText, activeText, activeCat, 15);
     setResult(r);
     const kinSummary = kinematicTrackerRef.current.analyze();
     setKinematicSummary(kinSummary);
-  }, [passageText]);
+  }, [currentPassageText]);
 
   // 15-minute countdown with zero stale closure
   useEffect(() => {
@@ -215,15 +261,28 @@ export const TcsIonSimulator: React.FC<Props> = ({
         className="flex items-center justify-between px-4 py-1.5 shadow-sm text-xs"
         style={{ background: '#1a365d', color: '#ecf0f1' }}
       >
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           <span className="font-semibold">
             Passage:{' '}
-            <span style={{ color: '#f1c40f' }}>{passageTitle}</span>
+            <span style={{ color: '#f1c40f' }}>{currentPassageTitle}</span>
           </span>
+          {activePyq && (
+            <span className="hidden lg:inline text-[10px] px-1.5 py-0.5 rounded font-bold uppercase bg-blue-500/30 text-blue-200 border border-blue-400/30">
+              {activePyq.exam} • {activePyq.year} ({activePyq.shift})
+            </span>
+          )}
           <span style={{ color: '#7f8c8d' }}>|</span>
           <span className="text-[11px]" style={{ color: '#bdc3c7' }}>
             Target: <strong>2,000 Key Depressions</strong> (15 min)
           </span>
+          <button
+            onClick={() => setIsPyqModalOpen(true)}
+            className="ml-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 transition flex items-center space-x-1"
+            title="Browse official SSC previous year question papers"
+          >
+            <BookOpen className="w-3 h-3" />
+            <span>Select PYQ</span>
+          </button>
         </div>
 
         {/* Sound Profile Switcher */}
@@ -267,20 +326,51 @@ export const TcsIonSimulator: React.FC<Props> = ({
       {/* ═══ START GATE OR SPLIT VIEW ═══════════════════════════════════════ */}
       {!examReady ? (
         <main className="flex-1 flex flex-col items-center justify-center p-4" style={{ background: '#f0f0f0' }}>
-          <div className="bg-white rounded shadow-md p-8 max-w-lg w-full text-center" style={{ borderTop: '4px solid #244c6d' }}>
-            <h2 className="text-xl font-bold mb-2" style={{ color: '#244c6d' }}>DEST — Data Entry Speed Assessment Test</h2>
-            <p className="text-md font-semibold text-gray-700 mb-6">{passageTitle}</p>
+          <div className="bg-white rounded shadow-md p-6 max-w-xl w-full text-center" style={{ borderTop: '4px solid #244c6d' }}>
+            <h2 className="text-xl font-bold mb-1" style={{ color: '#244c6d' }}>DEST — Data Entry Speed Assessment Test</h2>
+            <p className="text-xs text-gray-500 mb-4">Official Staff Selection Commission Examination Simulation</p>
+
+            {/* Selected PYQ Paper Card */}
+            <div className="p-3.5 mb-5 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50/80 to-slate-50 text-left">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-blue-600 text-white">
+                  {activePyq ? `${activePyq.exam} • ${activePyq.year} (${activePyq.shift})` : 'Official DEST Paper'}
+                </span>
+                <button
+                  onClick={() => setIsPyqModalOpen(true)}
+                  className="text-xs font-bold text-blue-700 hover:text-blue-900 underline flex items-center space-x-1"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Choose from 12 PYQs →</span>
+                </button>
+              </div>
+              <div className="font-bold text-slate-900 text-base leading-snug">
+                {currentPassageTitle}
+              </div>
+              {activePyq && (
+                <p className="text-xs text-slate-600 mt-1 line-clamp-1">
+                  {activePyq.description}
+                </p>
+              )}
+              <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-2 font-medium">
+                <span>Category: <strong>{activePyq?.category || 'General'}</strong></span>
+                <span>•</span>
+                <span>Target: <strong>~{activePyq?.targetKeystrokes.toLocaleString() || '2,000'}</strong> Key Depressions</span>
+                <span>•</span>
+                <span>Words: <strong>{activePyq?.wordCount || 240}</strong></span>
+              </div>
+            </div>
             
-            <div className="bg-slate-50 p-4 rounded border border-slate-200 mb-6 text-sm text-left space-y-3">
+            <div className="bg-slate-50 p-4 rounded border border-slate-200 mb-5 text-sm text-left space-y-3">
               <div className="flex justify-between border-b pb-2">
                 <span className="text-gray-600">Time allowed:</span>
-                <strong className="text-gray-800">15 minutes</strong>
+                <strong className="text-gray-800">15 minutes (900 seconds)</strong>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-600">Total Key Depressions:</span>
-                <strong className="text-gray-800">2,000</strong>
+                <span className="text-gray-600">Evaluation Standard:</span>
+                <strong className="text-gray-800">SSC Full / Half Penalty Alignment Matrix</strong>
               </div>
-              <div className="flex justify-between items-center pt-2">
+              <div className="flex justify-between items-center pt-1">
                 <span className="text-gray-600">Select Category:</span>
                 <select
                   value={category}
@@ -288,25 +378,34 @@ export const TcsIonSimulator: React.FC<Props> = ({
                   className="px-2 py-1 rounded border text-sm focus:outline-none"
                   style={{ background: '#fff', borderColor: '#ccc', color: '#222' }}
                 >
-                  <option value="UR">UR (≤20%)</option>
-                  <option value="OBC">OBC (≤25%)</option>
-                  <option value="EWS">EWS (≤25%)</option>
-                  <option value="SC">SC (≤30%)</option>
-                  <option value="ST">ST (≤30%)</option>
-                  <option value="PwD">PwD (≤30%)</option>
+                  <option value="UR">UR (Cutoff: ≤20% Errors)</option>
+                  <option value="OBC">OBC (Cutoff: ≤25% Errors)</option>
+                  <option value="EWS">EWS (Cutoff: ≤25% Errors)</option>
+                  <option value="SC">SC (Cutoff: ≤30% Errors)</option>
+                  <option value="ST">ST (Cutoff: ≤30% Errors)</option>
+                  <option value="PwD">PwD (Cutoff: ≤30% Errors)</option>
                 </select>
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setExamReady(true);
-              }}
-              className="w-full py-3 px-4 rounded text-white font-bold text-lg shadow hover:opacity-90 transition-opacity"
-              style={{ background: '#27ae60' }}
-            >
-              Start Exam
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setIsPyqModalOpen(true)}
+                className="py-3 px-4 rounded text-slate-700 font-bold text-sm border border-slate-300 bg-white hover:bg-slate-50 transition flex items-center justify-center space-x-2 shadow-xs"
+              >
+                <BookOpen className="w-4 h-4 text-blue-600" />
+                <span>Browse PYQ Papers</span>
+              </button>
+              <button
+                onClick={() => {
+                  setExamReady(true);
+                }}
+                className="flex-1 py-3 px-4 rounded text-white font-bold text-base shadow hover:opacity-90 transition-opacity"
+                style={{ background: '#27ae60' }}
+              >
+                Start Official Exam →
+              </button>
+            </div>
           </div>
         </main>
       ) : (
@@ -341,7 +440,7 @@ export const TcsIonSimulator: React.FC<Props> = ({
             onCut={block}
             onPaste={block}
           >
-            {passageText}
+            {currentPassageText}
           </div>
         </section>
 
@@ -428,6 +527,15 @@ export const TcsIonSimulator: React.FC<Props> = ({
             ← Exit Exam
           </button>
           <button
+            onClick={() => setIsPyqModalOpen(true)}
+            disabled={started && !submitted}
+            className="px-3 py-1 text-white font-bold rounded shadow-sm hover:bg-slate-800 disabled:opacity-50 transition flex items-center space-x-1"
+            style={{ background: '#34495e' }}
+          >
+            <BookOpen className="w-3 h-3" />
+            <span>📚 Choose PYQ</span>
+          </button>
+          <button
             onClick={onNextPassage}
             disabled={started && !submitted}
             className="px-3 py-1 text-white font-bold rounded shadow-sm hover:bg-blue-600 disabled:opacity-50"
@@ -502,8 +610,17 @@ export const TcsIonSimulator: React.FC<Props> = ({
             setKinematicSummary(null);
           }}
           onNextPassage={onNextPassage}
+          onSelectPyq={() => setIsPyqModalOpen(true)}
         />
       )}
+
+      {/* ═══ OFFICIAL SSC PYQ SELECTION MODAL ═════════════════════════════════ */}
+      <SscPyqModal
+        isOpen={isPyqModalOpen}
+        currentPassageId={activePyq?.id}
+        onSelect={handleSelectPyq}
+        onClose={() => setIsPyqModalOpen(false)}
+      />
     </div>
   );
 };
